@@ -9,7 +9,11 @@ class OnlineMonitorMod(loader.Module):
         "name": "OnlineMonitorMod",
         "user_tag": "Monitoring user: {}",
         "monitor_enabled": "Monitoring enabled",
-        "monitor_disabled": "Monitoring disabled"
+        "monitor_disabled": "Monitoring disabled",
+        "user_set_by_username": "User set for monitoring by username: {}",
+        "user_set_by_id": "User set for monitoring by ID: {}",
+        "user_not_found": "User not found: {}",
+        "invalid_user_id": "Invalid user ID"
     }
 
     def __init__(self):
@@ -67,9 +71,26 @@ class OnlineMonitorMod(loader.Module):
                     await self._client.send_message(self._chat_id, f"User {self.config['user_id']} is now offline")
 
     @loader.command(
+        ru_doc="Устанавливает пользователя для мониторинга по тегу",
+    )
+    async def stuser(self, message: Message):
+        """Sets the user to monitor by username"""
+        args = utils.get_args(message)
+        if not args:
+            return await utils.answer(message, "Please provide a username")
+        
+        username = args[0]
+        try:
+            user = await self._client.get_entity(username)
+            self.config["user_id"] = user.id
+            await utils.answer(message, self.strings("user_set_by_username").format(username))
+        except ValueError:
+            await utils.answer(message, self.strings("user_not_found").format(username))
+
+    @loader.command(
         ru_doc="Устанавливает ID пользователя для мониторинга",
     )
-    async def setuser(self, message: Message):
+    async def siuser(self, message: Message):
         """Sets the user ID to monitor"""
         args = utils.get_args(message)
         if not args:
@@ -77,16 +98,15 @@ class OnlineMonitorMod(loader.Module):
         
         try:
             user_id = int(args[0])
+            self.config["user_id"] = user_id
+            await utils.answer(message, self.strings("user_set_by_id").format(user_id))
         except ValueError:
-            return await utils.answer(message, "Invalid user ID")
-        
-        self.config["user_id"] = user_id
-        await utils.answer(message, self.strings("user_tag").format(user_id))
+            await utils.answer(message, self.strings("invalid_user_id"))
 
     @loader.command(
         ru_doc="Включает или выключает отслеживание",
     )
-    async def monitor(self, message: Message):
+    async def mt(self, message: Message):
         """Enables or disables monitoring"""
         if self.config["monitoring_enabled"]:
             self._client.remove_event_handler(self._monitoring_handler)
