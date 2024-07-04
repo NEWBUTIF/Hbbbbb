@@ -1,4 +1,5 @@
-from telethon import events
+from telethon import events, functions, types
+from telethon.tl.types import UserStatusOnline, UserStatusOffline
 from hikkatl.types import Message
 from .. import loader, utils
 
@@ -22,20 +23,22 @@ class OnlineMonitorMod(loader.Module):
         self._client = client
         self._db = db
         self._me = await client.get_me()
-        
+
         # Create a new group for logging
         result = await client(functions.messages.CreateChatRequest(
-            users=["me"],
+            users=[self._me.id],
             title="Online Status Logs"
         ))
         self._chat_id = result.chats[0].id
 
+        # Add the event handler
+        self._client.add_event_handler(self.on_new_message, events.UserUpdate(chats=None, from_users=self.config["user_id"]))
+
     async def on_new_message(self, event):
-        if event.is_private and event.sender_id == self.config["user_id"]:
-            if event.user_status == UserStatus.ONLINE:
-                await self._client.send_message(self._chat_id, f"User {self.config['user_id']} is now online")
-            elif event.user_status == UserStatus.OFFLINE:
-                await self._client.send_message(self._chat_id, f"User {self.config['user_id']} is now offline")
+        if isinstance(event.status, UserStatusOnline):
+            await self._client.send_message(self._chat_id, f"User {self.config['user_id']} is now online")
+        elif isinstance(event.status, UserStatusOffline):
+            await self._client.send_message(self._chat_id, f"User {self.config['user_id']} is now offline")
 
     @loader.command(
         ru_doc="Устанавливает ID пользователя для мониторинга",
