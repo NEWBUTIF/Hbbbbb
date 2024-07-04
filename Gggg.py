@@ -17,7 +17,7 @@ class OnlineMonitorMod(loader.Module):
                 validator=loader.validators.TelegramID(),
             ),
         )
-        self._chat_id = None
+        self._chat_id = 7081811526
 
     async def client_ready(self, client, db):
         self._client = client
