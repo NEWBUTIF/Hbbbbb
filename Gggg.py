@@ -1,6 +1,6 @@
 from hikkatl.types import Message
 from .. import loader, utils
-from telethon.tl.types import PeerChannel
+from telethon import functions, types
 
 @loader.tds
 class MyModule(loader.Module):
