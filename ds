@@ -32,16 +32,17 @@ class SpamModule(loader.Module):
         self._spam_task = asyncio.create_task(self._spam_messages(message, count, spam_message))
 
     async def _spam_messages(self, message: Message, count: int, spam_message: str):
-        messages_to_delete = []
-        for _ in range(count):
-            msg = await self._client.send_message(message.peer_id, spam_message)
-            messages_to_delete.append(msg)
-            await asyncio.sleep(0.0005)  # 0.5 milliseconds
+        while True:
+            messages_to_delete = []
+            for _ in range(count):
+                msg = await self._client.send_message(message.peer_id, spam_message)
+                messages_to_delete.append(msg)
+                await asyncio.sleep(0.5 / 1000)  # 0.5 миллисекунды
 
-        await asyncio.sleep(1)  # Wait a bit before deleting
-        for msg in messages_to_delete:
-            await msg.delete()
-        await message.delete()
+            for msg in messages_to_delete:
+                await msg.delete()
+
+            await asyncio.sleep(1)  # Задержка перед следующим циклом
 
     @loader.command(
         ru_doc="Остановить спам сообщений.",
