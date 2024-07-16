@@ -1,0 +1,69 @@
+from hikkatl.types import Message
+from .. import loader, utils
+import asyncio
+
+@loader.tds
+class SpamModule(loader.Module):
+    """Spam module"""
+    strings = {"name": "SpamModule"}
+
+    async def client_ready(self, client, db):
+        self._client = client
+        self._spam_task = None
+
+    @loader.command(
+        ru_doc="Запуск спама сообщений.",
+    )
+    async def spam1(self, message: Message):
+        """<кол-во сообщений> <текст сообщения> - Начать спамить"""
+        args = utils.get_args_raw(message).split(maxsplit=2)
+        if len(args) != 2:
+            await utils.answer(message, "Использование: .spam1 <кол-во сообщений> <текст сообщения>")
+            return
+
+        count, spam_message = args
+        if not count.isdigit():
+            await utils.answer(message, "Первый аргумент должен быть числом.")
+            return
+
+        count = int(count)
+        await utils.answer(message, f"Начинаю спамить {count} раз: {spam_message}")
+
+        self._spam_task = asyncio.create_task(self._spam_messages(message, count, spam_message))
+
+    async def _spam_messages(self, message: Message, count: int, spam_message: str):
+        messages_to_delete = []
+        for _ in range(count):
+            msg = await self._client.send_message(message.peer_id, spam_message)
+            messages_to_delete.append(msg)
+            await asyncio.sleep(0.0005)  # 0.5 milliseconds
+
+        await asyncio.sleep(1)  # Wait a bit before deleting
+        for msg in messages_to_delete:
+            await msg.delete()
+        await message.delete()
+
+    @loader.command(
+        ru_doc="Остановить спам сообщений.",
+    )
+    async def spam2(self, message: Message):
+        """Остановить спам"""
+        if self._spam_task and not self._spam_task.done():
+            self._spam_task.cancel()
+            self._spam_task = None
+            await utils.answer(message, "Спам остановлен.")
+        else:
+            await utils.answer(message, "Нет активного спама.")
+
+    @loader.command(
+        ru_doc="Показать список команд.",
+    )
+    async def spamhelp(self, message: Message):
+        """Показать список команд"""
+        commands = [
+            ".spam1 <кол-во сообщений> <текст сообщения> - Начать спамить",
+            ".spam2 - Остановить спам",
+        ]
+        await utils.answer(message, "\n".join(commands))
+
+# EOF
