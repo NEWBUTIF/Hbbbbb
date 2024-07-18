@@ -3,13 +3,26 @@ from .. import loader, utils
 import asyncio
 
 @loader.tds
-class SpamModule(loader.Module):
-    """Spam module"""
-    strings = {"name": "SpamModule"}
+class SpamBeautiful(loader.Module):
+    """Этот модуль был создан что бы красиво спамить и настроить по своему и создатель @NEW_BUTIF"""
+    strings = {
+        "name": "SpamBeautiful",
+        "start_spam": "Начинаю спамить {count} раз: {spam_message}",
+        "invalid_args": "Использование: .spam1 <кол-во сообщений> <текст сообщения>",
+        "invalid_count": "Первый аргумент должен быть числом.",
+        "spam_stopped": "Спам остановлен.",
+        "no_active_spam": "Нет активного спама.",
+        "spam_stat": "Активный спам: {active}\nКоличество сообщений в цикле: {count}\nСообщение: {message}",
+        "no_spam_active": "Нет активного спама."
+    }
+
+    def __init__(self):
+        self._spam_task = None
+        self._spam_count = 0
+        self._spam_message = ""
 
     async def client_ready(self, client, db):
         self._client = client
-        self._spam_task = None
 
     @loader.command(
         ru_doc="Запуск спама сообщений.",
@@ -18,17 +31,19 @@ class SpamModule(loader.Module):
         """<кол-во сообщений> <текст сообщения> - Начать спамить"""
         args = utils.get_args_raw(message).split(maxsplit=2)
         if len(args) != 2:
-            await utils.answer(message, "Использование: .spam1 <кол-во сообщений> <текст сообщения>")
+            await utils.answer(message, self.strings("invalid_args"))
             return
 
         count, spam_message = args
         if not count.isdigit():
-            await utils.answer(message, "Первый аргумент должен быть числом.")
+            await utils.answer(message, self.strings("invalid_count"))
             return
 
         count = int(count)
-        await utils.answer(message, f"Начинаю спамить {count} раз: {spam_message}")
+        self._spam_count = count
+        self._spam_message = spam_message
 
+        await utils.answer(message, self.strings("start_spam").format(count=count, spam_message=spam_message))
         self._spam_task = asyncio.create_task(self._spam_messages(message, count, spam_message))
 
     async def _spam_messages(self, message: Message, count: int, spam_message: str):
@@ -52,19 +67,18 @@ class SpamModule(loader.Module):
         if self._spam_task and not self._spam_task.done():
             self._spam_task.cancel()
             self._spam_task = None
-            await utils.answer(message, "Спам остановлен.")
+            await utils.answer(message, self.strings("spam_stopped"))
         else:
-            await utils.answer(message, "Нет активного спама.")
+            await utils.answer(message, self.strings("no_active_spam"))
 
     @loader.command(
-        ru_doc="Показать список команд.",
+        ru_doc="Показать статус спама.",
     )
-    async def spamhelp(self, message: Message):
-        """Показать список команд"""
-        commands = [
-            ".spam1 <кол-во сообщений> <текст сообщения> - Начать спамить",
-            ".spam2 - Остановить спам",
-        ]
-        await utils.answer(message, "\n".join(commands))
+    async def spamstat(self, message: Message):
+        """Показать статус активного спама"""
+        if self._spam_task and not self._spam_task.done():
+            await utils.answer(message, self.strings("spam_stat").format(active="Да", count=self._spam_count, message=self._spam_message))
+        else:
+            await utils.answer(message, self.strings("no_spam_active"))
 
 # EOF
